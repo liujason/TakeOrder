@@ -1,0 +1,65 @@
+<div ng-init="init()"/>
+<div id="scannerWrapper" ng-show="scanning">
+<canvas id="scanner" style="top:0px;position:fixed; background-color:dodgerblue;z-index: 1"></canvas>
+<div class="button" ng-click="stopScan()" style="z-index: 2;bottom:0;position:fixed;width:100%;background-color: rgba(200,0,0,0.5)">Cancel</div>
+</div>
+<div id="orderWrapper" ng-hide="scanning">
+<div class="row"><div class="small-12 columns">Order # 0001</div></div>
+<div class="row">
+    <div class="small-12 columns">
+        <table>
+            <thead>
+            <tr>
+                <th>item</th>
+                <th>name</th>
+                <th>price</th>
+                <th>count</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><img src="images/icon.png"/></td>
+                <td><b>NE3023</b> This is a beautiful necklace!</td>
+                <td>12.99</td>
+                <td>2</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="row">
+    <div class="small-12 columns">
+        <form>
+            <fieldset>
+                <legend>Add Item(s)</legend>
+                <div class="row">
+                    <div class="small-3 columns"><label class="inline">UPC</label></div>
+                    <div class="small-9 columns">
+                        <div class="row collapse">
+                            <div class="small-9 columns"><input ng-model="UPC" type="text" placeholder="Tap to enter UPC"/></div>
+                            <div class="small-3 columns"><a class="postfix button" ng-click="startScan()">Scan</a></div>
+                        </div>
+                        </div>
+                </div>
+                <div class="row">
+                    <div class="small-3 columns"><label class="inline">Description</label></div>
+                    <div class="small-9 columns"><input type="text" placeholder="Item Description"/></div>
+                </div>
+                <div class="row">
+                    <div class="small-3 columns"><label class="inline">Price{{price|currency}}</label></div>
+                    <div class="small-9 columns"><input type="number" ng-model="price" placeholder="Item Price"/></div>
+                </div>
+                <div class="row">
+                    <div class="small-3 columns"><label class="inline">Count</label></div>
+                    <div class="small-9 columns">
+                        <div class="row collapse">
+                            <div class="small-3 columns"><a class="prefix button" ng-click="count=count-1" ng-init="count=1">-</a></div>
+                            <div class="small-6 columns"><input type="number" placeholder="1" ng-model="count" value="{{count}}"/></div>
+                            <div class="small-3 columns"><a class="postfix button" ng-click="count=count+1">+</a></div>
+                        </div></div>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+</div>
+</div>
