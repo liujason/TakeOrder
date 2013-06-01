@@ -3,11 +3,11 @@
         xmlns:rim="http://www.blackberry.com/ns/widgets"
         version="1.0.0.0" id="HelloWorldApp">
 
-    <name>helloWorld</name>
-    <author>My name</author>
-    <description>The classic first program</description>
+    <name>Take Order</name>
+    <author>Jason Liu</author>
+    <description>An application to manage catalog and take orders</description>
     <icon src="images/icon.png"/>
-    <content src="http://192.168.1.4:9910/HelloWorld/index.html"/>
+    <content src="http://192.168.1.4:9910/TakeOrder/index.html"/>
 
 
     <access subdomains="true" uri="http://192.168.1.4:9910/">
