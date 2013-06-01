@@ -24,79 +24,16 @@
   */
 
 
-  app.controller('mainCtrl', function($scope) {
-    $scope.init = function() {
-      if (typeof Storage !== "undefined" && Storage !== null) {
-        if (localStorage.catalogFile == null) {
-          return blackberry.ui.dialog.customAskAsync("An empty catalog file is being created", ["OK"], function(index) {
-            var error;
-
-            try {
-              return $scope.createFS();
-            } catch (_error) {
-              error = _error;
-              return alert(error);
-            }
-          }, {
-            title: "Catalog file is not available"
-          });
-        }
-      }
-    };
-    $scope.createFS = function() {
-      blackberry.io.sandbox = false;
-      window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
-      return window.requestFileSystem(window.PERSISTENT, 5 * 1024 * 1024, $scope.initFS, $scope.errorFS);
-    };
-    $scope.initFS = function(fs) {
-      return fs.root.getDirectory(blackberry.io.SDCard + '/TakeOrder', {
-        create: true
-      }, function(dirEntry) {
-        return fs.root.getFile(blackberry.io.SDCard + '/TakeOrder/catalog.json', {
-          create: true
-        }, function(fileEntry) {
-          return fileEntry.createWriter(function(fileWriter) {
-            var bb;
-
-            window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder;
-            bb = new BlobBuilder();
-            bb.append('{}');
-            fileWriter.write(bb.getBlob('text/plain'));
-            return localStorage.catalogFile = blackberry.io.SDCard + '/TakeOrder/catalog.json';
-          }, $scope.errorFS);
-        }, $scope.errorFS);
-      }, $scope.errorFS);
-    };
-    return $scope.errorFS = function(err) {
-      var error, msg;
-
-      try {
-        msg = "File System Error: ";
-        switch (err.code) {
-          case FileError.NOT_FOUND_ERR:
-            msg += 'File or directory not found';
-            break;
-          case FileError.NOT_READABLE_ERR:
-            msg += 'File or directory not readable';
-            break;
-          case FileError.PATH_EXISTS_ERR:
-            msg += 'File or directory already exists';
-            break;
-          case FileError.TYPE_MISMATCH_ERR:
-            msg += 'Invalid filetype';
-            break;
-          default:
-            msg += 'unknown error';
-        }
-      } catch (_error) {
-        error = _error;
-        alert(error);
-      }
-      return alert(msg);
+  app.controller('mainCtrl', function($scope, $rootScope, catalogService) {
+    return $scope.init = function() {
+      return catalogService.getCatalog(function(catalog) {
+        $rootScope.catalog = catalog;
+        return alert("Loaded " + catalog.length + " catalog items.");
+      });
     };
   });
 
-  app.controller('newOrderCtrl', function($scope, $q, scannerService) {
+  app.controller('newOrderCtrl', function($scope, $rootScope, scannerService) {
     var deferScanResult;
 
     deferScanResult = false;
@@ -105,17 +42,29 @@
     };
     $scope.startScan = function() {
       scannerService.startScan(function(data) {
+        var item;
+
         $scope.scanning = false;
         if (data) {
           $scope.UPC = data;
+          item = _.find($rootScope.catalog, function(item) {
+            return item.upc === $scope.UPC;
+          });
+          if (item != null) {
+            $scope.desc = item.desc;
+            $scope.price = item.price;
+          }
         }
         return $scope.$apply();
       });
       return $scope.scanning = true;
     };
-    return $scope.stopScan = function(data) {
+    $scope.stopScan = function(data) {
       $scope.scanning = false;
       return scannerService.stopScan();
+    };
+    return $scope.addItem = function() {
+      return alert("add item");
     };
   });
 
@@ -203,7 +152,7 @@
           scanTimeout = $timeout(function() {
             blackberry.ui.toast.show("No code scanned in 60 seconds. Stopping scanner.");
             return scannerService.stopScan();
-          }, 5000);
+          }, 60000);
           return this.scanTimeout = scanTimeout;
         } catch (_error) {
           error = _error;
@@ -230,6 +179,108 @@
       onStopRead: function(data) {}
     };
     return scannerService;
+  }).factory("catalogService", function() {
+    return {
+      callback: false,
+      getCatalog: function(callback) {
+        this.callback = callback;
+        if (typeof Storage !== "undefined" && Storage !== null) {
+          blackberry.io.sandbox = false;
+          if (localStorage.catalogFile == null) {
+            blackberry.ui.dialog.customAskAsync("An empty catalog file is being created", ["OK"], function(index) {
+              var error;
+
+              try {
+                return this.createFS();
+              } catch (_error) {
+                error = _error;
+                return alert(error);
+              }
+            }, {
+              title: "Catalog file is not available"
+            });
+          }
+          window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+          return window.requestFileSystem(window.PERSISTENT, 5 * 1024 * 1024, function(fs) {
+            return fs.root.getFile(blackberry.io.SDCard + '/TakeOrder/catalog.json', {
+              create: false,
+              exclusive: true
+            }, function(fileEntry) {
+              return fileEntry.file(function(file) {
+                var reader;
+
+                reader = new FileReader();
+                reader.onload = function(e) {
+                  var catalog, error;
+
+                  catalog = JSON.parse(e.target.result);
+                  try {
+                    return callback(catalog);
+                  } catch (_error) {
+                    error = _error;
+                    return alert("catalog callback " + error);
+                  }
+                };
+                reader.onerror = function(e) {
+                  return alert("Error reading catalog file " + e.target.error);
+                };
+                return reader.readAsText(file, "UTF-8");
+              }, this.errorFS);
+            }, this.errorFS);
+          }, this.errorFS);
+        }
+      },
+      createFS: function() {
+        window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+        return window.requestFileSystem(window.PERSISTENT, 5 * 1024 * 1024, this.initFS, this.errorFS);
+      },
+      initFS: function(fs) {
+        return fs.root.getDirectory(blackberry.io.SDCard + '/TakeOrder', {
+          create: true
+        }, function(dirEntry) {
+          return fs.root.getFile(blackberry.io.SDCard + '/TakeOrder/catalog.json', {
+            create: true
+          }, function(fileEntry) {
+            return fileEntry.createWriter(function(fileWriter) {
+              var bb;
+
+              window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder;
+              bb = new BlobBuilder();
+              bb.append('{}');
+              fileWriter.write(bb.getBlob('text/plain'));
+              return localStorage.catalogFile = blackberry.io.SDCard + '/TakeOrder/catalog.json';
+            }, this.errorFS);
+          }, this.errorFS);
+        }, this.errorFS);
+      },
+      errorFS: function(err) {
+        var error, msg;
+
+        try {
+          msg = "File System Error: ";
+          switch (err.code) {
+            case FileError.NOT_FOUND_ERR:
+              msg += 'File or directory not found';
+              break;
+            case FileError.NOT_READABLE_ERR:
+              msg += 'File or directory not readable';
+              break;
+            case FileError.PATH_EXISTS_ERR:
+              msg += 'File or directory already exists';
+              break;
+            case FileError.TYPE_MISMATCH_ERR:
+              msg += 'Invalid filetype';
+              break;
+            default:
+              msg += 'unknown error';
+          }
+        } catch (_error) {
+          error = _error;
+          alert(error);
+        }
+        return alert(msg);
+      }
+    };
   });
 
 }).call(this);

@@ -29,7 +29,7 @@
 </div>
 <div class="row">
     <div class="small-12 columns">
-        <form>
+        <form ng-submit="addItem">
             <fieldset>
                 <legend>Add Item(s)</legend>
                 <div class="row">
@@ -43,10 +43,10 @@
                 </div>
                 <div class="row">
                     <div class="small-3 columns"><label class="inline">Description</label></div>
-                    <div class="small-9 columns"><input type="text" placeholder="Item Description"/></div>
+                    <div class="small-9 columns"><input ng-model="desc" type="text" placeholder="Item Description"/></div>
                 </div>
                 <div class="row">
-                    <div class="small-3 columns"><label class="inline">Price{{price|currency}}</label></div>
+                    <div class="small-3 columns"><label class="inline">Price</label></div>
                     <div class="small-9 columns"><input type="number" ng-model="price" placeholder="Item Price"/></div>
                 </div>
                 <div class="row">
@@ -57,6 +57,9 @@
                             <div class="small-6 columns"><input type="number" placeholder="1" ng-model="count" value="{{count}}"/></div>
                             <div class="small-3 columns"><a class="postfix button" ng-click="count=count+1">+</a></div>
                         </div></div>
+                </div>
+                <div class="row">
+                    <div class="small-6 small-centered columns"><input type="submit" class="button" value="Add Item"/></div>
                 </div>
             </fieldset>
         </form>
