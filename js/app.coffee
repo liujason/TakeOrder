@@ -1,9 +1,15 @@
+###
+Existing problems:
+  Can't browse files in SDCard - wanted to check physical order info from /TakeOrder/orders
+  Can't display image from SDCard - web view does not have permission
+###
+
 app=angular.module('orderApp',['serviceModule'])
 
 
 app.config(($routeProvider)->
   $routeProvider.when('/', templateUrl:'partials/main.html', controller:'mainCtrl')
-                .when('/newOrder', templateUrl:'partials/newOrder.html', controller:'newOrderCtrl')
+                .when('/newOrder', templateUrl:'partials/newOrder.html?random11', controller:'newOrderCtrl')
                 .when('/sampleScan', templateUrl:'partials/sampleScan.html', controller:'scanCtrl')
                 .otherwise(redirectTo:'/')
 )
@@ -14,14 +20,20 @@ app.controller('mainCtrl', ($scope, $rootScope, catalogService)->
   $scope.init=()->
     catalogService.getCatalog (catalog)->
       $rootScope.catalog=catalog
-      alert("Loaded "+ catalog.length+" catalog items.")
-
+      #alert("Loaded "+ catalog.length+" catalog items.")
 )
 
-app.controller('newOrderCtrl',($scope, $rootScope, scannerService)->
+app.controller('newOrderCtrl',($scope, $rootScope, scannerService, orderService)->
   deferScanResult=false
+
   $scope.init=()->
     $scope.scanning=false
+    $scope.order=orderService.newOrder()
+    $scope.order.items.push
+      desc:"test description"
+      price:"1.35"
+      count:2
+      code:"12345"
   $scope.startScan=()->
     scannerService.startScan((data)->
       $scope.scanning=false
@@ -33,6 +45,7 @@ app.controller('newOrderCtrl',($scope, $rootScope, scannerService)->
         if item?
           $scope.desc=item.desc
           $scope.price=item.price
+          $scope.code=item.code
       $scope.$apply()
     )
     $scope.scanning=true
@@ -40,7 +53,19 @@ app.controller('newOrderCtrl',($scope, $rootScope, scannerService)->
     $scope.scanning=false
     scannerService.stopScan()
   $scope.addItem=()->
-    alert("add item")
+    $scope.order.items.push
+      imagePath:"file:/"+blackberry.io.SDCard+"/TakeOrder/images/icon.png"
+      desc:$scope.desc
+      price:$scope.price
+      code:$scope.code
+      count:$scope.count
+    # TODO Save order to file system (look for on update model).
+    # TODO Prevent existing window accidentally
+  $scope.updateItem=(item)->
+    console.log(item)
+    $scope.updatingItem=item
+    $('#updateItemModal').foundation('reveal', 'open')
+  true
 )
 
 app.controller("scanCtrl",['$scope','$location', ($scope, $location)->
@@ -151,6 +176,7 @@ angular.module('serviceModule',[]).factory('scannerService',($timeout)->
 ).factory("catalogService",()->
   callback:false
   getCatalog:(callback)->
+    that=this
     this.callback=callback
     if Storage?
       blackberry.io.sandbox=false;
@@ -179,29 +205,33 @@ angular.module('serviceModule',[]).factory('scannerService',($timeout)->
             reader.onerror=(e)->
               alert("Error reading catalog file "+e.target.error)
             reader.readAsText(file, "UTF-8")
-          ,this.errorFS
-        ,this.errorFS
-      ,this.errorFS)
+          ,that.errorFS
+        ,that.errorFS
+      ,that.errorFS)
 
   createFS:()->
     window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem
     window.requestFileSystem(window.PERSISTENT, 5*1024*1024, this.initFS, this.errorFS)
+
+  #TODO: This might overwrite existing catalog.json if localStorage does not have catalog info
   initFS:(fs)->
+    that=this
     fs.root.getDirectory blackberry.io.SDCard+'/TakeOrder'
     ,create:true
-      ,(dirEntry)->
-        fs.root.getFile blackberry.io.SDCard+'/TakeOrder/catalog.json'
-        ,create:true
-          ,(fileEntry)->
-            fileEntry.createWriter (fileWriter)->
-              window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder
-              bb=new BlobBuilder()
-              bb.append('{}')
-              fileWriter.write bb.getBlob 'text/plain'
-              localStorage.catalogFile=blackberry.io.SDCard+'/TakeOrder/catalog.json'
-            ,this.errorFS
-        ,this.errorFS
-    ,this.errorFS
+    ,(dirEntry)->
+      fs.root.getFile blackberry.io.SDCard+'/TakeOrder/catalog.json'
+      ,create:true
+      ,(fileEntry)->
+        fileEntry.createWriter (fileWriter)->
+          window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder
+          bb=new BlobBuilder()
+          bb.append('{}')
+          fileWriter.write bb.getBlob 'text/plain'
+          localStorage.catalogFile=blackberry.io.SDCard+'/TakeOrder/catalog.json'
+        ,that.errorFS
+      ,that.errorFS
+    ,that.errorFS
+
   errorFS:(err)->
     try
       msg="File System Error: "
@@ -210,6 +240,55 @@ angular.module('serviceModule',[]).factory('scannerService',($timeout)->
         when FileError.NOT_READABLE_ERR then msg+= 'File or directory not readable'
         when FileError.PATH_EXISTS_ERR then msg+= 'File or directory already exists'
         when FileError.TYPE_MISMATCH_ERR then msg+='Invalid filetype'
+        else
+          msg+='unknown error'
+    catch error
+      alert(error)
+    alert(msg)
+).factory("orderService",()->
+  listOrders_LEGACY:(callback)->
+    alert("ListOrders")
+    that=this
+    blackberry.io.sandbox=false
+    window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem
+    #TODO try removing orders folder and see what happens
+    window.requestFileSystem window.PERSISTENT, 1024*1024, (fs)->
+      fs.root.getDirectory blackberry.io.SDCard+'/TakeOrder/orders/', create:true, (dirEntry)->
+        dirReader=dirEntry.createReader()
+        dirReader.readEntries (entries)->
+          #TODO WHERE IS MY ENTRIES?????
+          alert(entries)
+
+          for entry in entries
+            alert(entry.fullPath)
+          #callback(orders)
+        ,that.errorFS
+      ,that.errorFS
+    ,that.errorFS
+  listOrders:(callback)->
+
+  getOrder:(orderName)->
+
+  newOrder:()->
+    order={}
+    if !localStorage.orderCounter?
+      localStorage.orderCounter=1
+    order.id=localStorage.orderCounter
+    order.items=[]
+    order
+  deleteOrder:(orderName)->
+
+  saveOrder:(order)->
+
+  errorFS:(err)->
+    try
+      msg="File System Error: "
+      switch err.code
+        when FileError.NOT_FOUND_ERR then msg+= 'File or directory not found'
+        when FileError.NOT_READABLE_ERR then msg+= 'File or directory not readable'
+        when FileError.PATH_EXISTS_ERR then msg+= 'File or directory already exists'
+        when FileError.TYPE_MISMATCH_ERR then msg+='Invalid filetype'
+        when FileError.SECURITY_ERR then msg+='Security error'
         else
           msg+='unknown error'
     catch error

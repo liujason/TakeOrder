@@ -4,24 +4,26 @@
 <div class="button" ng-click="stopScan()" style="z-index: 2;bottom:0;position:fixed;width:100%;background-color: rgba(200,0,0,0.5)">Cancel</div>
 </div>
 <div id="orderWrapper" ng-hide="scanning">
-<div class="row"><div class="small-12 columns">Order # 0001</div></div>
+<div class="row"><div class="small-12 columns">Order # {{order.id}}</div></div>
 <div class="row">
     <div class="small-12 columns">
         <table>
             <thead>
             <tr>
-                <th>item</th>
-                <th>name</th>
-                <th>price</th>
-                <th>count</th>
+                <th>#</th>
+                <th>Item</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Count</th>
             </tr>
             </thead>
             <tbody>
-            <tr>
-                <td><img src="images/icon.png"/></td>
-                <td><b>NE3023</b> This is a beautiful necklace!</td>
-                <td>12.99</td>
-                <td>2</td>
+            <tr ng-repeat="item in order.items" ng-click="updateItem(item)">
+                <td>{{$index+1}}</td>
+                <td><b>{{item.code}}</b></td>
+                <td>{{item.desc}}</td>
+                <td>{{item.price|currency}}</td>
+                <td>{{item.count}}</td>
             </tr>
             </tbody>
         </table>
@@ -29,32 +31,36 @@
 </div>
 <div class="row">
     <div class="small-12 columns">
-        <form ng-submit="addItem">
+        <form ng-submit="addItem()">
             <fieldset>
                 <legend>Add Item(s)</legend>
                 <div class="row">
                     <div class="small-3 columns"><label class="inline">UPC</label></div>
                     <div class="small-9 columns">
                         <div class="row collapse">
-                            <div class="small-9 columns"><input ng-model="UPC" type="text" placeholder="Tap to enter UPC"/></div>
+                            <div class="small-9 columns"><input required ng-model="UPC" type="text" placeholder="Tap to enter UPC"/></div>
                             <div class="small-3 columns"><a class="postfix button" ng-click="startScan()">Scan</a></div>
                         </div>
                         </div>
                 </div>
                 <div class="row">
                     <div class="small-3 columns"><label class="inline">Description</label></div>
-                    <div class="small-9 columns"><input ng-model="desc" type="text" placeholder="Item Description"/></div>
+                    <div class="small-9 columns"><input required ng-model="desc" type="text" placeholder="Item Description"/></div>
+                </div>
+                <div class="row">
+                    <div class="small-3 columns"><label class="inline">Code</label></div>
+                    <div class="small-9 columns"><input required ng-model="code" type="text" placeholder="Item Code"/></div>
                 </div>
                 <div class="row">
                     <div class="small-3 columns"><label class="inline">Price</label></div>
-                    <div class="small-9 columns"><input type="number" ng-model="price" placeholder="Item Price"/></div>
+                    <div class="small-9 columns"><input required type="number" step="0.01" min="0.01" ng-model="price" placeholder="Item Price"/></div>
                 </div>
                 <div class="row">
                     <div class="small-3 columns"><label class="inline">Count</label></div>
                     <div class="small-9 columns">
                         <div class="row collapse">
                             <div class="small-3 columns"><a class="prefix button" ng-click="count=count-1" ng-init="count=1">-</a></div>
-                            <div class="small-6 columns"><input type="number" placeholder="1" ng-model="count" value="{{count}}"/></div>
+                            <div class="small-6 columns"><input required type="number" placeholder="1" min="1" ng-model="count" value="{{count}}"/></div>
                             <div class="small-3 columns"><a class="postfix button" ng-click="count=count+1">+</a></div>
                         </div></div>
                 </div>
@@ -65,4 +71,22 @@
         </form>
     </div>
 </div>
+</div>
+<div id="updateItemModal" class="reveal-modal">
+    <h2>{{updatingItem.code}}</h2>
+    <p class="lead">{{updatingItem.desc}}</p>
+    <div class="row">
+        <div class="small-3 columns"><label class="inline">Price</label></div>
+        <div class="small-9 columns"><input required type="number" step="0.01" min="0.01" ng-model="updatingItem.price" value="{{updatingItem.price}}" placeholder="Item Price"/></div>
+    </div>
+    <div class="row">
+        <div class="small-3 columns"><label class="inline">Count</label></div>
+        <div class="small-9 columns">
+            <div class="row collapse">
+                <div class="small-3 columns"><a class="prefix button" ng-click="updatingItem.count=updatingItem.count-1">-</a></div>
+                <div class="small-6 columns"><input required type="number" placeholder="1" min="1" ng-model="updatingItem.count" value="{{updatingItem.count}}"/></div>
+                <div class="small-3 columns"><a class="postfix button" ng-click="updatingItem.count=updatingItem.count+1">+</a></div>
+            </div></div>
+    </div>
+    <a class="close-reveal-modal">&#215;</a>
 </div>
